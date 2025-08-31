@@ -1,0 +1,35 @@
+const express = require("express");
+const app = express();
+app.use(express.json());
+const users = {
+  alice: { role: "manager" },
+  bob: { role: "waiter" }
+};
+function authorizeRole(allowedRoles) {
+  return (req, res, next) => {
+    const username = req.headers["user"]; 
+    const user = users[username];
+
+    if (!user) {
+      return res.status(401).json({ error: "User not found or unauthorized" });
+    }
+
+    if (!allowedRoles.includes(user.role)) {
+      return res.status(403).json({
+        error: `Permission denied: ${user.role}s are not allowed to access this route`
+      });
+    }
+
+    req.user = user;
+    next();
+  };
+}
+app.post("/orders", authorizeRole(["waiter", "manager"]), (req, res) => {
+  res.json({ message: `Order created successfully by ${req.user.role}` });
+});
+
+app.put("/menu", authorizeRole(["manager"]), (req, res) => {
+  res.json({ message: `Menu updated successfully by ${req.user.role}` });
+});
+
+app.listen(3000, () => console.log("Server running on port 3000"));
